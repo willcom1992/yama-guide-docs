@@ -1,0 +1,170 @@
+@startuml 登山者ガイドマッチングドメインモデル
+skinparam classAttributeIconSize 0
+hide circle
+title 登山者ガイドマッチング ドメインモデル（クラス図）
+
+' ====== マスタ・列挙 ======
+enum ReservationStatus {
+  仮予約
+  予約完了
+  予約取消
+  自動期限切れ
+}
+
+enum PublishState {
+  公開
+  非公開
+}
+
+class "難易度(マスタ)" as Difficulty {
+  +id: string
+  +名称: string  ' 初級/中級/上級 ...
+  +表示順: int
+}
+
+class "言語(マスタ)" as Language {
+  +code: string  ' ja, en, ...
+  +名称: string
+}
+
+' ====== 共通主体とロール ======
+class "ユーザー（共通主体）" as User {
+  +id: UUID
+  +表示名: string
+  +連絡先メール: string
+  +利用言語(優先): string  ' Language.code
+  +連絡先電話: string?     ' 任意
+  +作成日時: datetime
+  +更新日時: datetime
+}
+
+class "利用者" as Customer <<role>> {
+  +id: UUID
+  +userId: UUID
+}
+
+class "登山ガイド" as Guide <<role>> {
+  +id: UUID                ' = アカウントの主体ID
+  +userId: UUID
+  +氏名(公開名): string
+  +活動エリア: string
+  +経験年数: int
+  +自己紹介文: text
+  +顔写真URL: string
+  +平均評価値(集計): decimal(2,1) ' 例: 4.3
+  +作成日時: datetime
+  +更新日時: datetime
+}
+
+' ガイド対応言語（多対多）
+class "ガイド対応言語" as GuideLanguage {
+  +guideId: UUID
+  +languageCode: string
+  --  PK(guideId, languageCode)
+}
+
+' ====== ガイドプラン ======
+class "ガイドプラン" as GuidePlan {
+  +id: UUID
+  +guideId: UUID
+  +タイトル: string
+  +説明: text
+  +所要時間目安: string
+  +基本料金: decimal(12,2)   ' 税/通貨は後で
+  +難易度Id: string          ' Difficulty.id
+  +集合場所: string
+  +公開状態: PublishState
+  +作成日時: datetime
+  +更新日時: datetime
+}
+
+' ====== 予約 ======
+class "予約（ガイドプラン予約）" as Reservation {
+  +予約番号: string
+  +planId: UUID
+  +customerId: UUID
+  +希望日(単日): date
+  +人数: int
+  +概算金額(見積): decimal(12,2)
+  +連絡事項: text?
+  +ステータス: ReservationStatus
+  +承認期限日時: datetime
+  +作成日時: datetime
+  +更新日時: datetime
+}
+
+' ====== レビュー ======
+abstract class "レビュー対象" as ReviewTarget
+Guide -up-|> ReviewTarget
+GuidePlan -up-|> ReviewTarget
+
+class "レビュー" as Review {
+  +id: UUID
+  +targetType: enum('Guide','GuidePlan')
+  +targetId: UUID           ' ReviewTarget のID
+  +投稿者(customerId): UUID
+  +予約Id: UUID?            ' 任意
+  +評価(★1–5): int
+  +コメント: text
+  +公開状態: PublishState
+  +公開日時: datetime?
+  +作成日時: datetime
+  +更新日時: datetime
+}
+
+' ====== 通知 ======
+enum NotificationType {
+  予約承認依頼
+  承認完了
+  却下
+  期限切れ
+}
+
+enum Channel {
+  アプリ内
+  メール
+}
+
+class "通知" as Notification {
+  +id: UUID
+  +対象ユーザー(userId): UUID
+  +種別: NotificationType
+  +既読: boolean
+  +送信チャネル: Channel
+  +関連予約Id: UUID?
+  +作成日時: datetime
+  +更新日時: datetime
+}
+
+' ====== 関係（リレーション） ======
+User "1" -- "0..1" Customer : ロール
+User "1" -- "0..1" Guide : ロール
+
+Guide "1" -- "0..*" GuidePlan : 提供
+GuidePlan "1" -- "0..*" Reservation : 受け付け
+Customer "1" -- "0..*" Reservation : 申込
+
+Guide "1" -- "0..*" Review : 受領 (targetType='Guide')
+GuidePlan "1" -- "0..*" Review : 受領 (targetType='GuidePlan')
+Customer "1" -- "0..*" Review : 投稿
+
+User "1" -- "0..*" Notification : 受信
+
+Language "1" -- "0..*" GuideLanguage
+Guide "1" -- "0..*" GuideLanguage
+
+Difficulty "1" -- "0..*" GuidePlan : 難易度
+
+' ====== 重要ビジネスルール（メモ） ======
+note right of Reservation
+- ステータスは {仮予約, 予約完了, 予約取消, 自動期限切れ}
+- 起点は常に「仮予約」
+- 承認期限日時を過ぎた仮予約は「自動期限切れ」
+- 予約完了後のキャンセル可否はMVPで要決定
+end note
+
+note bottom of Review
+- レビューはガイド or プランのどちらかに紐づく
+- 公開状態の制御あり（公開/非公開）
+end note
+@enduml
