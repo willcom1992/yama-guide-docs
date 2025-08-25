@@ -17,80 +17,84 @@ enum PublishState {
 }
 
 class "難易度(マスタ)" as Difficulty {
-  +id: string
-  +名称: string  ' 初級/中級/上級 ...
-  +表示順: int
+  +名称
+  +表示順
 }
 
 class "言語(マスタ)" as Language {
-  +code: string  ' ja, en, ...
-  +名称: string
+  +名称
 }
 
 ' ====== 共通主体とロール ======
 class "ユーザー（共通主体）" as User {
-  +id: UUID
-  +表示名: string
-  +連絡先メール: string
-  +利用言語(優先): string  ' Language.code
-  +連絡先電話: string?     ' 任意
-  +作成日時: datetime
-  +更新日時: datetime
+  +表示名
+  +連絡先メール
+  +利用言語(優先)
+  +連絡先電話
+  +作成日時
+  +更新日時
 }
 
 class "利用者" as Customer <<role>> {
-  +id: UUID
-  +userId: UUID
+  +ユーザーID
 }
 
 class "登山ガイド" as Guide <<role>> {
-  +id: UUID                ' = アカウントの主体ID
-  +userId: UUID
-  +氏名(公開名): string
-  +活動エリア: string
-  +経験年数: int
-  +自己紹介文: text
-  +顔写真URL: string
-  +平均評価値(集計): decimal(2,1) ' 例: 4.3
-  +作成日時: datetime
-  +更新日時: datetime
+  +ユーザーID
+  +氏名(公開名)
+  +活動エリア
+  +経験年数
+  +自己紹介文
+  +顔写真
+  +平均評価値
+  +作成日時
+  +更新日時
 }
 
 ' ガイド対応言語（多対多）
 class "ガイド対応言語" as GuideLanguage {
-  +guideId: UUID
-  +languageCode: string
-  --  PK(guideId, languageCode)
+  +ガイドID
+  +言語コード
 }
 
 ' ====== ガイドプラン ======
 class "ガイドプラン" as GuidePlan {
-  +id: UUID
-  +guideId: UUID
-  +タイトル: string
-  +説明: text
-  +所要時間目安: string
-  +基本料金: decimal(12,2)   ' 税/通貨は後で
-  +難易度Id: string          ' Difficulty.id
-  +集合場所: string
-  +公開状態: PublishState
-  +作成日時: datetime
-  +更新日時: datetime
+  +タイトル
+  +説明
+  +山域
+  +開始日
+  +終了日
+  +日程チップ
+  +種類
+  +体力レベル
+  +技術レベル
+  +価格
+  +公開フラグ
+  +定員
+  +集合情報
+  +解散場所
+  +行程
+  +持ち物
+  +注意事項
+  +支払い方法
+  +画像一覧
+  +作成日時
+  +更新日時
 }
 
 ' ====== 予約 ======
 class "予約（ガイドプラン予約）" as Reservation {
-  +予約番号: string
-  +planId: UUID
-  +customerId: UUID
-  +希望日(単日): date
-  +人数: int
-  +概算金額(見積): decimal(12,2)
-  +連絡事項: text?
-  +ステータス: ReservationStatus
-  +承認期限日時: datetime
-  +作成日時: datetime
-  +更新日時: datetime
+  +予約番号
+  +ガイドプランID
+  +利用者ID
+  +希望日
+  +人数
+  +概算金額
+  +連絡事項
+  +ステータス
+  +承認期限日時
+  +作成日時
+  +更新日時
 }
 
 ' ====== レビュー ======
@@ -99,17 +103,16 @@ Guide -up-|> ReviewTarget
 GuidePlan -up-|> ReviewTarget
 
 class "レビュー" as Review {
-  +id: UUID
-  +targetType: enum('Guide','GuidePlan')
-  +targetId: UUID           ' ReviewTarget のID
-  +投稿者(customerId): UUID
-  +予約Id: UUID?            ' 任意
-  +評価(★1–5): int
-  +コメント: text
-  +公開状態: PublishState
-  +公開日時: datetime?
-  +作成日時: datetime
-  +更新日時: datetime
+  +対象種別
+  +対象ID
+  +投稿者ID
+  +予約ID
+  +評価
+  +コメント
+  +公開状態
+  +公開日時
+  +作成日時
+  +更新日時
 }
 
 ' ====== 通知 ======
@@ -126,14 +129,13 @@ enum Channel {
 }
 
 class "通知" as Notification {
-  +id: UUID
-  +対象ユーザー(userId): UUID
-  +種別: NotificationType
-  +既読: boolean
-  +送信チャネル: Channel
-  +関連予約Id: UUID?
-  +作成日時: datetime
-  +更新日時: datetime
+  +対象ユーザーID
+  +種別
+  +既読
+  +送信チャネル
+  +関連予約ID
+  +作成日時
+  +更新日時
 }
 
 ' ====== 関係（リレーション） ======
